@@ -37,6 +37,9 @@ public class InferenceEngine {
     @Autowired
     private List<DiagnosticRule> todasLasReglas;
 
+    @Autowired(required = false)
+    private ClipsIntegrationService clipsIntegration;
+
     private Map<Long, DiagnosticRule> reglasActivas = new HashMap<>();
     private Map<Long, Map<String, Object>> respuestasPorCaso = new HashMap<>();
     private Map<Long, String> ultimaPreguntaPorCaso = new HashMap<>();
@@ -128,16 +131,11 @@ public class InferenceEngine {
 
     /**
      * Realiza el diagnóstico final
+     * Prioriza CLIPS si está disponible, fallback a reglas Java
      */
     @Transactional
     public void realizarDiagnostico(Caso caso) {
         log.info("Realizando diagnóstico final para caso {}", caso.getId());
-
-        DiagnosticRule regla = reglasActivas.get(caso.getId());
-        if (regla == null) {
-            log.error("No hay regla activa para caso {}", caso.getId());
-            throw new RuntimeException("No se puede realizar diagnóstico sin regla activa");
-        }
 
         Map<String, Object> respuestas = respuestasPorCaso.get(caso.getId());
         if (respuestas == null || respuestas.isEmpty()) {
@@ -145,8 +143,34 @@ public class InferenceEngine {
             throw new RuntimeException("No se puede realizar diagnóstico sin respuestas");
         }
 
-        // Evaluar diagnóstico usando la regla
-        Diagnostico diagnostico = regla.evaluarDiagnostico(respuestas, caso);
+        Diagnostico diagnostico = null;
+
+        // Intentar usar CLIPS primero si está disponible
+        if (clipsIntegration != null) {
+            try {
+                // Obtener respuestas del caso desde la base de datos
+                List<Respuesta> respuestasList = respuestaRepository.findByCasoId(caso.getId());
+                
+                diagnostico = clipsIntegration.procesarCasoConClips(caso, respuestasList);
+                log.info("Diagnóstico generado por CLIPS para caso {}", caso.getId());
+            } catch (Exception e) {
+                log.warn("Error usando CLIPS, fallback a reglas Java: {}", e.getMessage());
+                // Continuar con fallback a Java
+            }
+        }
+
+        // Fallback a reglas Java si CLIPS no está disponible o falló
+        if (diagnostico == null) {
+            DiagnosticRule regla = reglasActivas.get(caso.getId());
+            if (regla == null) {
+                log.error("No hay regla activa para caso {}", caso.getId());
+                throw new RuntimeException("No se puede realizar diagnóstico sin regla activa");
+            }
+
+            // Evaluar diagnóstico usando la regla Java
+            diagnostico = regla.evaluarDiagnostico(respuestas, caso);
+            log.info("Diagnóstico generado por reglas Java para caso {}", caso.getId());
+        }
 
         // Convertir listas inmutables en mutables para que JPA pueda persistirlas
         if (diagnostico.getInstruccionesDiy() != null) {
