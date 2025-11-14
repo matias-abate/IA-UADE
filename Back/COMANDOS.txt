@@ -1,0 +1,173 @@
+═══════════════════════════════════════════════════════════════
+  SISTEMA EXPERTO - GUÍA RÁPIDA DE COMANDOS
+═══════════════════════════════════════════════════════════════
+
+📌 INICIO RÁPIDO
+───────────────────────────────────────────────────────────────
+cd /Users/matiasabate/Documents/IA/Back
+mvn spring-boot:run
+
+Espera a ver: "=== 3 casos de ejemplo creados exitosamente ==="
+Luego abre: http://localhost:8080/api/casos
+
+
+🔨 COMPILACIÓN
+───────────────────────────────────────────────────────────────
+mvn clean compile          # Compilar
+mvn clean install          # Compilar + crear JAR
+mvn clean package          # Crear paquete ejecutable
+
+
+▶️  EJECUCIÓN
+───────────────────────────────────────────────────────────────
+mvn spring-boot:run        # Iniciar aplicación
+bash iniciar.sh            # Iniciar con script
+
+
+⏹️  DETENER
+───────────────────────────────────────────────────────────────
+Ctrl + C                   # En la terminal donde corre
+
+
+🌐 URLS IMPORTANTES
+───────────────────────────────────────────────────────────────
+http://localhost:8080/api/casos              # API - Listar casos
+http://localhost:8080/h2-console             # Consola base de datos
+http://localhost:8080/api/casos/1            # Ver caso #1
+
+
+🧪 PROBAR API (curl)
+───────────────────────────────────────────────────────────────
+# Listar casos
+curl http://localhost:8080/api/casos
+
+# Ver caso específico
+curl http://localhost:8080/api/casos/1
+
+# Crear nuevo caso
+curl -X POST http://localhost:8080/api/casos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "descripcion": "Heladera no enfría",
+    "tipoElectrodomestico": "HELADERA",
+    "modelo": "Samsung RT35",
+    "antiguedad": 3
+  }'
+
+# Siguiente pregunta
+curl http://localhost:8080/api/casos/1/siguiente-pregunta
+
+# Responder pregunta
+curl -X POST http://localhost:8080/api/casos/1/responder \
+  -H "Content-Type: application/json" \
+  -d '{"preguntaId": 1, "valor": "si"}'
+
+# Ver hipótesis
+curl http://localhost:8080/api/casos/1/hipotesis
+
+# Finalizar diagnóstico
+curl -X POST http://localhost:8080/api/casos/1/finalizar
+
+
+💾 BASE DE DATOS H2
+───────────────────────────────────────────────────────────────
+URL:      http://localhost:8080/h2-console
+JDBC URL: jdbc:h2:file:./data/sistemaexperto
+Usuario:  sa
+Password: (vacío)
+
+Consultas SQL útiles:
+  SELECT * FROM CASOS;
+  SELECT * FROM RESPUESTAS;
+  SELECT * FROM HIPOTESIS;
+  SELECT * FROM DIAGNOSTICOS;
+
+
+🔧 SOLUCIÓN DE PROBLEMAS
+───────────────────────────────────────────────────────────────
+# Puerto 8080 ocupado
+lsof -ti:8080 | xargs kill -9
+
+# Limpiar proyecto
+mvn clean
+
+# Reinstalar dependencias
+mvn clean install -U
+
+# Ver procesos Java
+jps
+
+# Matar todos los procesos Spring Boot
+pkill -f spring-boot
+
+
+🗑️  RESETEAR BASE DE DATOS
+───────────────────────────────────────────────────────────────
+# Detener la app primero (Ctrl + C)
+rm -rf data/
+# Reiniciar - se crearán los 3 casos de ejemplo nuevamente
+mvn spring-boot:run
+
+
+📊 VERIFICAR ESTADO
+───────────────────────────────────────────────────────────────
+# Ver si la app está corriendo
+curl -s http://localhost:8080/api/casos | jq
+
+# Ver cantidad de casos
+curl -s http://localhost:8080/api/casos | jq '. | length'
+
+# Ver si el puerto 8080 está en uso
+lsof -i :8080
+
+
+🧰 SCRIPTS DISPONIBLES
+───────────────────────────────────────────────────────────────
+bash iniciar.sh           # Inicia la aplicación
+bash test-api.sh          # Pruebas automáticas del API
+bash verificar.sh         # Verifica configuración del sistema
+
+
+📁 UBICACIÓN DE ARCHIVOS
+───────────────────────────────────────────────────────────────
+Base de datos:     ./data/sistemaexperto.mv.db
+Configuración:     src/main/resources/application.properties
+JAR ejecutable:    target/sistema-experto-1.0.0.jar
+Logs:              (en consola)
+
+
+🎯 FLUJO COMPLETO DE DIAGNÓSTICO
+───────────────────────────────────────────────────────────────
+1. Crear caso         → POST /api/casos
+2. Obtener pregunta   → GET  /api/casos/{id}/siguiente-pregunta
+3. Responder          → POST /api/casos/{id}/responder
+4. Ver hipótesis      → GET  /api/casos/{id}/hipotesis
+5. Repetir 2-4 hasta completar
+6. Finalizar          → POST /api/casos/{id}/finalizar
+7. Ver resultado      → GET  /api/casos/{id}
+
+
+✅ VERIFICAR QUE TODO FUNCIONA
+───────────────────────────────────────────────────────────────
+1. mvn spring-boot:run
+2. Esperar mensaje: "=== 3 casos de ejemplo creados ==="
+3. curl http://localhost:8080/api/casos
+4. Deberías ver JSON con 3 casos
+5. Ctrl + C para detener
+6. mvn spring-boot:run (reiniciar)
+7. curl http://localhost:8080/api/casos
+8. Los 3 casos siguen ahí ✅ (PERSISTENCIA FUNCIONA)
+
+
+📚 DOCUMENTACIÓN
+───────────────────────────────────────────────────────────────
+README.md              - Documentación completa del proyecto
+DATABASE.md            - Guía de base de datos
+INICIO_RAPIDO.md       - Guía de inicio rápido
+COMANDOS.txt           - Este archivo
+
+
+═══════════════════════════════════════════════════════════════
+  ¡TODO LISTO! Los casos ahora se guardan correctamente. ✅
+═══════════════════════════════════════════════════════════════
+
